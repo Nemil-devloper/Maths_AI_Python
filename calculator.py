@@ -26,21 +26,34 @@ def extract_numbers_and_operation(text):
     print(f"Tokens: {tokens}")
     numbers = []
     operation = None
+    temp_number = ""
+    
     for token in tokens:
-        if token.isdigit():
-            numbers.append(int(token))
-        elif token in ['+', '-', '*', '/']:
-            operation = token
-        elif token in ['multiply', 'times', 'x']:
-            operation = '*'
-        elif token in ['add']:
-            operation = '+'
-        elif token in ['subtract']:
-            operation = '-'
-        elif token in ['divide']:
-            operation = '/'
+        if token in ['negative', '-'] and not temp_number:
+            temp_number += '-'
+        elif token.replace('.', '', 1).isdigit():
+            temp_number += token
+        elif temp_number:
+            numbers.append(float(temp_number))
+            temp_number = ""
+            if token in ['+', '-', '*', '/']:
+                operation = token
+            elif token in ['multiply', 'times', 'x']:
+                operation = '*'
+            elif token in ['add']:
+                operation = '+'
+            elif token in ['subtract']:
+                operation = '-'
+            elif token in ['divide']:
+                operation = '/'
+
+    # Append last number if any
+    if temp_number:
+        numbers.append(float(temp_number))
+
     print(f"Extracted numbers: {numbers}, operation: {operation}")
     return numbers, operation
+
 
 
 def calculate_result(numbers, operation):
