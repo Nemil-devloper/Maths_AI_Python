@@ -9,27 +9,31 @@ import nltk
 from word2number import w2n
 from nltk.tokenize import word_tokenize
 
-nltk.download('punkt')
+# Download NLTK data (if not already downloaded)
+nltk.download('punkt', quiet=True)
+
+# Initialize text-to-speech engine and speech recognizer
 engine = pyttsx3.init()
 recognizer = sr.Recognizer()
 
-
 def speak(text):
+    """Convert text to speech."""
     engine.say(text)
     engine.runAndWait()
 
-
-def record_audio(duration=5, fs=44100, filename="output.wav"):
+def record_audio(duration=3, fs=44100, filename="output.wav"):
     """Record audio and save it to a file."""
-    print("Recording...")
-    recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float64')
-    sd.wait()
-    print("Finished recording")
-    wavio.write(filename, recording, fs, sampwidth=2)
-    return filename
-
-
-from word2number import w2n
+    try:
+        print("Recording...")
+        recording = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='float64')
+        sd.wait()
+        print("Finished recording")
+        wavio.write(filename, recording, fs, sampwidth=2)
+        return filename
+    except Exception as e:
+        print(f"Error recording audio: {e}")
+        speak("There was an error recording the audio. Please try again.")
+        return None
 
 def listen_for_input(prompt):
     """Listen for user input and return the recognized number or prompt for keyboard input."""
@@ -41,40 +45,65 @@ def listen_for_input(prompt):
 
     while attempts < max_attempts:
         try:
+            # Record audio and handle potential errors
             audio_filename = record_audio()
+            if audio_filename is None:
+                continue
+
+            # Recognize speech from the recorded audio file
             with sr.AudioFile(audio_filename) as source:
                 audio = recognizer.record(source)
 
+                # Get the recognized text from speech
                 text = recognizer.recognize_google(audio).lower()
-                print(f"You said: {text}")  # Log the recognized text
+                print(f"Recognized Text: {text}")  # Debugging log
 
-                try:
-                    # Attempt to convert spoken text (words or numbers) to a number
-                    number = w2n.word_to_num(text)  # Convert word-form numbers
-                    return number
-                except ValueError:
-                    if text.isdigit():  # Direct numeric input check
-                        return int(text)
-                    else:
-                        print("Invalid input. Please try again.")
-                        speak("That doesn't seem like a valid number. Please try again.")
+                # Tokenize the recognized text to get individual words
+                tokens = word_tokenize(text)
+                print(f"Tokens: {tokens}")  # Debugging log
+
+                # Iterate through the tokens and try converting them to numbers
+                for token in tokens:
+                    try:
+                        # Check if the token is a valid number using word2num
+                        number = w2n.word_to_num(token)
+                        print(f"Converted '{token}' to number: {number}")  # Debugging log
+                        return number
+                    except ValueError:
+                        if token.isdigit():  # Direct check for digit strings like '1', '2', etc.
+                            print(f"Token '{token}' is a valid digit.")
+                            return int(token)
+                        elif token.startswith('-') and token[1:].isdigit():  # Handle negative numbers
+                            print(f"Token '{token}' is a negative number.")
+                            return int(token)
+
+                # If no valid number is found, notify the user
+                print("No valid number found in spoken input.")
+                speak("That doesn't seem like a valid number. Please try again.")
         except sr.UnknownValueError:
             print("Sorry, I didn't understand the audio. Please try again.")
             speak("Sorry, I couldn't understand. Please try again.")
         except sr.RequestError as e:
-            print(f"Could not request results from Google Speech Recognition service; {e}")
+            print(f"Speech recognition service error: {e}")
             speak("There was an error with the speech recognition service. Please try again later.")
             return None
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            speak("An unexpected error occurred. Please try again.")
 
         attempts += 1
 
-    # Fallback to keyboard input
-    fallback = input("Please type the coefficient: ")
+    # Fallback to keyboard input if all attempts fail
+    fallback = input("Could not understand. Please type the coefficient: ")
     try:
         return int(fallback)
     except ValueError:
         print("Invalid input. Defaulting to 0.")
-        return 0  # Default to 0 if input is invalid
+        return 0
+
+
+
+
 def plot_quadratic(a, b, c):
     """Plot the quadratic equation based on coefficients."""
     x = np.linspace(-100, 100, 400)
@@ -92,7 +121,6 @@ def plot_quadratic(a, b, c):
     plt.xlim(-100, 100)
     plt.show()
 
-
 def polynomial_solver():
     """Solve a quadratic equation based on user input."""
     a = listen_for_input("Please say the coefficient of X squared.")
@@ -101,6 +129,18 @@ def polynomial_solver():
 
     if a is None or b is None or c is None:
         print("Invalid input detected. Exiting.")
+        return
+
+    if a == 0:
+        print("This is not a quadratic equation. It's a linear equation.")
+        speak("This is not a quadratic equation. Solving as a linear equation.")
+        if b != 0:
+            sol = -c / b
+            print(f"The solution is: {sol}")
+            speak(f"The solution is: {sol}")
+        else:
+            print("No valid equation to solve.")
+            speak("No valid equation to solve.")
         return
 
     D = b ** 2 - 4 * a * c
@@ -112,7 +152,11 @@ def polynomial_solver():
     speak(result)
     print(result)
 
-    nature = "complex" if D < 0 else "real" if D > 0 else "real and equal"
+    nature = "complex" if D < 0 else "real and distinct" if D > 0 else "real and equal"
     speak(f"The equation has {nature} solutions.")
 
     plot_quadratic(a, b, c)
+
+# Main execution
+if __name__ == "__main__":
+    polynomial_solver()
