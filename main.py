@@ -10,29 +10,40 @@ from nltk.tokenize import word_tokenize
 from word2number import w2n
 import matplotlib.pyplot as plt
 
-nltk.download('punkt')
 from calculator import *  # Import AI calculator function
 from polynomial import *  # Import polynomial solver function
+nltk.download('punkt')
 
 
 def main_menu():
-    print("Welcome! Choose an option:")
+    print("===================================")
+    print("        Welcome to the Main Menu")
+    print("===================================")
     print("1: AI Calculator")
     print("2: Polynomial Solver")
     print("0: Exit")
+    print("===================================")
 
-    choice = input("Enter your choice: ")
+    try:
+        choice = int(input("Enter your choice: "))
+        if choice == 1:
+            ai_calculator()  # Call the AI calculator function
+        elif choice == 2:
+            polynomial_solver()  # Call the polynomial solver function
+        elif choice == 0:
+            confirm = input("Are you sure you want to exit? (y/n): ").lower()
+            if confirm == 'y':
+                print("Exiting. Goodbye!")
+                sys.exit()
+            else:
+                main_menu()
+        else:
+            print("Invalid choice. Please try again.")
+            main_menu()
+    except ValueError:
+        print("Invalid input. Please enter a number.")
+        main_menu()
 
-    if choice == '1':
-        ai_calculator()  # Call the AI calculator function
-    elif choice == '2':
-        polynomial_solver()  # Call the polynomial solver function
-    elif choice == '0':
-        print("Exiting. Goodbye!")
-        sys.exit()
-    else:
-        print("Invalid choice. Please try again.")
-        main_menu()  # Re-display the menu for valid input
 
 
 if __name__ == "__main__":
